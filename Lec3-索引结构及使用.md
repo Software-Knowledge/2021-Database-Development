@@ -122,7 +122,7 @@ Lec3-索引结构及使用
    2. 低选择性添加特殊索引
 2. Select * from profiles where sex = 'M' order by rating limit 10;可以添加sex，rating列上的复合索引。
 3. select * from profiles where sex = 'M' order by rating limit 100000, 10;
-   1. 依旧很慢，更好的策略是限制用户查看的页数
+   1. 依旧很慢，更好的策略是限制用户**查看的页数**
    2. 也可以
 
 ```sql
@@ -159,12 +159,14 @@ Select * from t inner join (
 
 ### 2.7.1. 函数和类型转换对索引的影响
 1. `Where f(indexed_col) = "some value"`
-   1. 这种检索条件会使索弓|无法发挥作用
+   1. 这种检索条件会使索引无法发挥作用
    2. 日期函数
 2. 隐式类型转换
 
 ### 2.7.2. 字符串和日期的例子
 ![](img/lec3/11.png)
+
+1. B树索引只能进行前缀查询
 
 ```sql
 where date_entered = to_date('18-JUN-1815', 'DD-M0N-YYYY')
@@ -194,14 +196,14 @@ where date_entered >= to_date(' 18-JUN-1815', 'DD-MON-YYYY') and date_entered < 
 2. 但如果插入并发性过高，在主键索引的创建操作上会发生十分严重的资源竞争
 3. 解决方案
    1. 反向键索引或叫逆向索引(reverse index)
-   2. 哈希索引(hash indexing)
+   2. 哈希索引(hash indexing)：高并发自增我们修改为高并发的随机生成
 
 ### 2.7.6. 为什么没有使用我的索引?
 1. 情况1:我们在使用B+树索引，而且谓词中没有使用索引的最前列：`T，T(X,Y)`上有索引，做`SELECT * FROM T WHERE Y=5`
 2. 跳跃式索引(仅CBO)
 3. 情况2:使用`SELECT COUNT(*) FROM T`，而且T上有索引，但是优化器仍然全表扫描
 4. 情况3:对于一个有索引的列作出函数查询:`Select * from t where f(indexed_col) = value`
-5. 情况4:隐形函数查询
+5. 情况4:隐形函数查询：隐形的过程导致没有使用索引
 6. 情况5:此时如果用了索引，实际反而会更慢
 7. 情况6:没有正确的统计信息，造成CBO无法做出正确的选择
 8. 总结:归根到底，不使用索引的通常愿意就是"不能使用索引，使用索引会返回不正确的结果"，或者"不该使用索引，如果使用了索引就会变得更慢"
@@ -211,8 +213,7 @@ where date_entered >= to_date(' 18-JUN-1815', 'DD-MON-YYYY') and date_entered < 
 2. 索引只是访问数据的一种方式
 3. "通过索引定位记录"只是查询工作的一部分
 4. 优化器有更多的选择权利
-5. 总结:索引不是万灵药。充分理解要处理的数据，做出合理的判断，才能获
-得高效方案
+5. 总结:索引不是万灵药。充分理解要处理的数据，做出合理的判断，才能获得高效方案
 
 ## 2.8. 思考题
 1. 请研究你手上使用的数据库，比如，MySQL or Oracle, 请研究数据库管理系统提供的其它索引形式，并阅读相关的文档
