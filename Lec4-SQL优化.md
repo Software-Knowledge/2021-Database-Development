@@ -521,8 +521,8 @@ Where o1.ordered = (
 
 ```sql
 1 select substr(e.ename,iter.pos,1) as C
-2 from (select ename from emp where ename = 'KING') e,
-3 (select id as pos from t10) iter
+2   from (select ename from emp where ename = 'KING') e,
+3   (select id as pos from t10) iter
 4 where iter.pos <= length(e.ename)
 ```
 
@@ -1014,7 +1014,7 @@ create view V (id,amt,trx)
 3. 如果你还有时间，创建大一点的表，100万行，然后执行查询100次，1000次或者100个并发同时执行，就可以感受到性能和效率
 4. 尝试将读写分离来提高资源：可以先离线计算出一个中位数(但是不是完全正确，但是已经相当精确)
 
-## 5.4. 日期
+## 5.4. 日期处理
 
 ### 5.4.1. 年月日加减法
 1. 问题，以员工CLARK的hiredate为例，计算入职的前后五天，入职的前后五个月，以及入职前后5年的日期，hiredate='09-JUN-1981'
@@ -1040,6 +1040,7 @@ create view V (id,amt,trx)
 7 from emp
 8 where deptno=10
 
+/* date_add是函数 */
 1 select  date_add(hiredate,interval -5 day) as hd_minus_5D,
 2         date_add(hiredate,interval 5 day) as hd_plus_5D,
 3         date_add(hiredate,interval -5 month) as hd_minus_5M,
@@ -1065,7 +1066,7 @@ create view V (id,amt,trx)
 10   where ename = 'ALLEN'
 11  ) y
 
-/* MySQL and SQL Server */
+/* MySQL and SQL Server 第一个参数要比较晚，第二个参数要比较早*/
 1   select datediff(ward_hd,allen_hd)
 2     from (
 3       select hiredate as ward_hd
@@ -1081,7 +1082,7 @@ create view V (id,amt,trx)
 
 ### 5.4.3. 计算两个日期之间的工作日天数
 ```sql
-/* MySQL */
+/* MySQL 使用数据透视表(t500)表只有id，从1-500，先找到有多少天，再排除掉周六日，注意id要先减1再加1 */
 1   select sum(case when date_format(
 2               date_add(jones_hd,
 3                 interval t500.id-1 DAY),'%a')
@@ -1139,23 +1140,26 @@ Oracle
 
 ### 5.4.5. 判断闰年
 ```sql
-/* Oracle */
+/* Oracle 检查2月的最后一天 */
 1 select to_char(
 2   last_day(add_months(trunc(sysdate,'y'),1)),
 3   'DD')
 4 from t1
 
+/* 第一步，得到年的第一天 */
 select trunc(sysdate,'y')
   from t1
 -----------
 01-JAN-2020
 
+/* 第二步，加一个月 */
 select add_months(trunc(sysdate,'y'),1) dy
   from t1
 
 -----------
 01-FEB-2020
 
+/* 第三步，找到最后一天 */
 select last_day(add_months(trunc(sysdate,'y'),1)) dy
   from t1
 
@@ -1178,6 +1182,8 @@ select last_day(add_months(trunc(sysdate,'y'),1)) dy
 - CURRENT_DATE和CURRENT_DATE()是CURDATE)_的同义词。
 
 ### 5.4.6. 计算一年有多少天
+期末考试有可能会考
+
 ```sql
 /* Oracle */
 1 select add_months(trunc(sysdate,'y'),12) - trunc(sysdate,'y')
@@ -1198,7 +1204,7 @@ select last_day(add_months(trunc(sysdate,'y'),1)) dy
 2   next_day(last_day(trunc(sysdate,'mm'))-7,'MONDAY') last_monday
 3 from dual
 
-/* MySQL */
+/* MySQL 先检查当前月份的第一天，然后从第一个星期一推导下一个星期一 */
 1   select first_monday,
 2     case month(adddate(first_monday,28))
 3       when mth then adddate(first_monday,28)
@@ -1279,6 +1285,7 @@ select * from emp_project
 
 ### 5.5.1. 叠加行集(Union & Union all)
 1. 如果需要显示EMP表中部门ID等于10的信息以及DEPT表中各个部门的名称和编号
+2. 将不相关内容放到一个表中
 
 ![](img/lec4/22.png)
 
@@ -1293,6 +1300,8 @@ select * from emp_project
 8 select dname, deptno
 9   from dept
 ```
+1. 必须保证类型相同和字段数要相同
+2. 如果有重复内容UNION ALL一并纳入
 
 ```sql
 /* × */
@@ -1309,8 +1318,9 @@ select deptno, dname
 select deptno
   from emp
 
+/* 重复记录Union ALL纳入，union去掉重复行是排序删除重复行，所以大规模结果集会出现问题 */
 select deptno
-    from emp
+  from emp
   union
 select deptno
   from dept
@@ -1339,16 +1349,16 @@ DEPTNO
 40
 ```
 
-### 5.5.2. 查找只存在于一张表的数据
+### 5.5.2. 查找只存在于一张表的数据(差 -)
 1. DEPT表中DEPTNO=40的数据并不存在于EMP表中，怎么把它找出来？
 
 ```sql
-/* Oracle */
+/* Oracle 要求类型和个数相同，不返回重复值，空值没有问题*/
 1 select deptno from dept
 2 minus
 3 select deptno from emp
 
-/* MySQL and SQL Server*/
+/* MySQL and SQL Server MySQL要使用子查询 */
 1 select deptno
 2   from dept
 3 where deptno not in (select deptno from emp)
@@ -1364,7 +1374,7 @@ DEPTNO
 3 where deptno not in (select deptno from emp)
 ```
 
-2. MySQL
+2. MySQL：空值not in会出现问题，同时避免in，改用exists
 
 ```sql
 select deptno
@@ -1589,6 +1599,11 @@ select deptno,
   ) x
 group by deptno
 
+DEPTNO   TOTAL_SAL   TOTAL_BONUS
+------   ------      ------
+10       10050        2135
+
+/* 单独计算一下金额，问题？部分员工被计算了2次 */
 select sum(sal) from emp where deptno=10
 
 SUM(SAL)
@@ -1612,7 +1627,7 @@ MILLER      1300
 - 但是这个查询中，部门为10的所有人都有奖金
 
 ```sql
-/* Perform a sum of only the DISTINCT salaries: */
+/* Perform a sum of only the DISTINCT salaries: 不得不使用distinct*/
 
 1   select deptno,
 2     sum(distinct sal) as total_sal,
@@ -1634,7 +1649,7 @@ MILLER      1300
 ```
 
 ### 5.5.7. 思考题
-1. 接4.6，修改了一个条件，不是所有员工都有奖金
+1. 接4.6，修改了一个条件，不是所有员工都有奖金：少算也可能出问题
 2. 请计算出部门编号为10的员工的工资总额和奖金总额
 
 ```sql
@@ -1644,7 +1659,7 @@ select * from emp_bonus
 ![](img/lec4/28.png)
 
 ```sql
-/* 错误的示范 */
+/* 错误的示范 少算 */
 select deptno,
   sum(sal) as total_sal,
   sum(bonus) as total_bonus
