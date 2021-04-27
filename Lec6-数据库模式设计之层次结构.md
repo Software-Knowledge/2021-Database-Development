@@ -6,21 +6,23 @@ Lec6-数据库模式设计之层次结构
 1. 树状结构（Tree Structures）
    1. 历史
       1. 层次数据库
-      2. 网状数据库
+      2. 网状数据库：灵活但是还是存在困难
       3. 关系型数据库
+         1. 在效率、灵活等方面找到了一个平衡点
+         2. 没有必要将配置文件存储到数据库中，存储在文件系统也是很好的一个选择
    2. 直到关系理论出现，数据库设计是"科学（science）"而非"工艺（craft）"
       1. 层次性数据广泛存在（XML，LDAP，BOM…）
    3. 层次结构复杂度在于
       1. 访问树的方式
 
-# 2. 树状结构VS.主从结构
+# 2. 树状结构 VS. 主从结构
 1. 父子结构（parent/child link）--tree structure
-2. 主从结构（master/detail relationship）
+2. 主从结构（master/detail relationship）：通过外键，来形成主从结构
 3. 差异
-   1. 树状结构保存只需要一张表
-   2. 深度
-   3. 所有权
-   4. 多重父节点
+   1. 树状结构保存只需要一张表：代表层次的树。所有节点的类型都相同，节点的属性都相似，表(节点)和自己有主从关系而不是其他表
+   2. 深度：主从结构没有深度的概念
+   3. 所有权：主从结构可以明确外键完整性约束，但是树状结构不需要定义所有权
+   4. 多重父节点：单一父节点描述父子关系(子节点引用父节点)，先解决单一父节点的树
 4. 参考书籍：Fabian Pascal：Practical Issues in Database Management（Addion Wesley）
 
 # 3. 层次结构的实际案例
@@ -63,12 +65,17 @@ where inventory.id = 'AZE087564609'
 # 4. 用SQL数据库描述树结构
 1. 只要对象的类型相同，而对象的层树可变，其关系就应该被建模为树结构
 2. 在数据库设计中，树通常三种模型
-   1. Adjacency model-邻接模型
-   2. Materialized path model-物化路径模型
-   3. Nested set model-嵌套集合模型
-      1. Joe Celko发明
-      2. Vadim Tropashko 提出过nested interval model
-3. 数据来源http://www.kessler-web.co.uk
+   1. Adjacency model 邻接模型
+      1. 层次中父节点id作为子节点id的一个属性pid，不能确定兄弟节点的排序
+      2. 难以处理的，是递归的
+   2. Materialized path model 物化路径模型
+      1. 将树中间的每一个节点和在树中的位置描述成数据的结合
+      2. 是所有子节点的祖先节点的id的串联(1.2.3)
+      3. 能够知道兄弟节点之间的排名，家谱
+   3. Nested set model 嵌套集合模型 1996
+      1. 每一个节点被赋予了一对数字(left number, right number)
+      2. 父节点的左数字和右数字之间包含了它所有的子节点的左数字、右数字
+3. <a href = "http://www.kessler-web.co.uk">数据来源</a>
 
 # 5. 树的实际实现
 
@@ -96,3 +103,4 @@ where inventory.id = 'AZE087564609'
 ![](img/lec6/5.png)
 
 ![](img/lec6/6.png)
+
